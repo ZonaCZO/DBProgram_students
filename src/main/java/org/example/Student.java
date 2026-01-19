@@ -9,28 +9,27 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Класс, представляющий студента.
- * [cite: 7]
+ * Class representing a student.
  */
 public class Student implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    // Атрибуты [cite: 9]
+    // Attributes
     private String name;
     private int age;
-    private double grade; // Общий средний балл (0.0 - 100.0)
-    private final String studentID; // Уникальный ID
-    private LocalDate enrollmentDate; // Дата зачисления
-    private ArrayList<String> courses; // Список кодов курсов
+    private double grade; // Overall average grade (0.0 - 100.0)
+    private final String studentID; // Unique ID
+    private LocalDate enrollmentDate; // Enrollment date
+    private ArrayList<String> courses; // List of course codes
 
-    // --- Конструкторы  ---
+    // --- Constructors ---
 
     /**
-     * Базовая инициализация. ID генерируется автоматически.
+     * Basic initialization. ID is generated automatically.
      */
     public Student(String name, int age, double grade) {
-        this.studentID = UUID.randomUUID().toString(); // Генерация UUID
-        this.enrollmentDate = LocalDate.now(); // Текущая дата
+        this.studentID = UUID.randomUUID().toString(); // Generate UUID
+        this.enrollmentDate = LocalDate.now(); // Current date
         this.courses = new ArrayList<>();
         setName(name);
         setAge(age);
@@ -38,7 +37,7 @@ public class Student implements Serializable {
     }
 
     /**
-     * Полная инициализация (например, при загрузке из БД).
+     * Full initialization (e.g., when loading from DB).
      */
     public Student(String studentID, String name, int age, double grade, LocalDate enrollmentDate, ArrayList<String> courses) {
         this.studentID = studentID;
@@ -49,7 +48,7 @@ public class Student implements Serializable {
         setGrade(grade);
     }
 
-    // --- Геттеры и Сеттеры с валидацией [cite: 18] ---
+    // --- Getters and Setters with Validation ---
 
     public String getStudentID() {
         return studentID;
@@ -60,9 +59,9 @@ public class Student implements Serializable {
     }
 
     public void setName(String name) {
-        // Валидация: только буквы, пробелы и дефисы
+        // Validation: only letters, spaces, and hyphens
         if (name == null || !name.matches("^[\\p{L} .-]+$")) {
-            throw new StudentValidationException("Имя содержит недопустимые символы. Разрешены только буквы, пробелы и дефисы.");
+            throw new StudentValidationException("Name contains invalid characters. Only letters, spaces, and hyphens are allowed.");
         }
         this.name = name;
     }
@@ -72,9 +71,9 @@ public class Student implements Serializable {
     }
 
     public void setAge(int age) {
-        // Валидация: от 18 до 100
+        // Validation: 18 - 100
         if (age < 18 || age > 100) {
-            throw new StudentValidationException("Возраст студента должен быть в диапазоне от 18 до 100 лет.");
+            throw new StudentValidationException("Student age must be between 18 and 100.");
         }
         this.age = age;
     }
@@ -84,15 +83,15 @@ public class Student implements Serializable {
     }
 
     public void setGrade(double grade) {
-        // Валидация диапазона 0.0 - 100.0
+        // Range validation 0.0 - 100.0
         if (grade < 0.0 || grade > 100.0) {
-            throw new StudentValidationException("Оценка должна быть от 0.0 до 100.0.");
+            throw new StudentValidationException("Grade must be between 0.0 and 100.0.");
         }
-        // Валидация точности (до двух знаков)
-        // Проверяем, есть ли значимая дробная часть за пределами 2 знаков
+        // Precision validation (up to two decimal places)
+        // Check if there is significant decimal part beyond 2 digits
         double scaleCheck = grade * 100;
         if (Math.abs(scaleCheck - Math.round(scaleCheck)) > 0.0001) {
-            throw new StudentValidationException("Оценка может иметь не более двух знаков после запятой.");
+            throw new StudentValidationException("Grade must have no more than two decimal places.");
         }
         this.grade = grade;
     }
@@ -105,7 +104,7 @@ public class Student implements Serializable {
         this.enrollmentDate = enrollmentDate;
     }
 
-    // --- Управление курсами---
+    // --- Course Management ---
 
     public ArrayList<String> getCourses() {
         return courses;
@@ -121,12 +120,11 @@ public class Student implements Serializable {
         courses.remove(courseCode);
     }
 
-    // --- Методы бизнес-логики ---
+    // --- Business Logic Methods ---
 
     /**
-     * Форматирует детали студента в строку.
-     * Использует StringBuilder и Streams.
-     *
+     * Formats student details into a string.
+     * Uses StringBuilder and Streams.
      */
     public String displayInfo() {
         StringBuilder sb = new StringBuilder();
@@ -138,9 +136,9 @@ public class Student implements Serializable {
         sb.append("Average Grade: ").append(String.format("%.2f", grade)).append("\n");
         sb.append("Enrolled: ").append(enrollmentDate).append("\n");
 
-        // Использование Stream API для обработки списка курсов
+        // Use Stream API to process course list
         String coursesStr = courses.stream()
-                .map(String::toUpperCase) // Пример обработки
+                .map(String::toUpperCase) // Example processing
                 .collect(Collectors.joining(", "));
 
         sb.append("Courses: [").append(coursesStr).append("]");
@@ -148,23 +146,22 @@ public class Student implements Serializable {
     }
 
     /**
-     * Вычисляет взвешенный GPA.
-     * @param courseCredits карта, где ключ - код курса, значение - кредиты (вес).
-     *
+     * Calculates weighted GPA.
+     * @param courseCredits map where key is course code, value is credits (weight).
      */
     public double calculateGPA(Map<String, Integer> courseCredits) {
         if (courses.isEmpty() || courseCredits == null) {
             return 0.0;
         }
-        // Логика может быть расширена. Здесь упрощенный пример:
-        // Предполагаем, что 'grade' - это общая оценка, но если мы хотим считать
-        // на основе отдельных курсов, нам нужна была бы таблица оценок по курсам.
-        // Согласно текущей структуре Student, у нас есть только общий 'grade'.
-        // Данный метод возвращает grade, сконвертированный в 4.0 шкалу (пример логики).
-        return (grade / 20.0) - 1.0; // Примерная конвертация 100-балльной шкалы в GPA 4.0
+        // Logic can be extended. Simplified example:
+        // Assume 'grade' is overall grade, but if we wanted to calculate based on
+        // individual courses, we would need a grades table per course.
+        // Current structure has only overall 'grade'.
+        // This method returns grade converted to 4.0 scale (example logic).
+        return (grade / 20.0) - 1.0; // Approximate conversion of 100-point scale to GPA 4.0
     }
 
-    // --- Equals и HashCode  ---
+    // --- Equals and HashCode ---
 
     @Override
     public boolean equals(Object o) {

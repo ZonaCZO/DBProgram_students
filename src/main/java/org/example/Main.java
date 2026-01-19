@@ -5,42 +5,43 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Главный класс приложения.
- * Отвечает за инициализацию окружения, настройку обработки ошибок и запуск GUI.
+ * Main application class.
+ * Responsible for environment setup, error handling, and launching the GUI.
  */
 public class Main {
-    // Настройка логгера (Java Util Logging)
+    // Logger setup (Java Util Logging)
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
-        // 1. Настройка глобального перехватчика исключений
-        // Это гарантирует, что любое необработанное исключение (например, RuntimeException)
-        // будет залогировано, а пользователь увидит понятное сообщение.
+        // 1. Global exception handler setup
+        // Ensures any unhandled exception (e.g., RuntimeException)
+        // is logged, and the user sees a clear message.
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
-            LOGGER.log(Level.SEVERE, "Непредвиденная ошибка в потоке " + thread.getName(), throwable);
+            LOGGER.log(Level.SEVERE, "Unexpected error in thread " + thread.getName(), throwable);
             JOptionPane.showMessageDialog(null,
-                    "Произошла критическая ошибка: " + throwable.getMessage() + "\nСм. логи для деталей.",
-                    "Критическая ошибка",
+                    "A critical error occurred: " + throwable.getMessage() + "\nSee logs for details.",
+                    "Critical Error",
                     JOptionPane.ERROR_MESSAGE);
         });
 
-        // 2. Запуск GUI в потоке диспетчеризации событий (EDT)
-        // Swing не является потокобезопасным, поэтому запуск должен быть обернут в invokeLater.
+        // 2. Launch GUI in Event Dispatch Thread (EDT)
+        // Swing is not thread-safe, so launch must be wrapped in invokeLater.
         SwingUtilities.invokeLater(() -> {
             try {
+                // Set system Look and Feel for better aesthetics
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 
-                // Инициализация БД происходит внутри getInstance
+                // DB initialization happens inside getInstance
                 StudentManagerImpl.getInstance();
 
-                LOGGER.info("Приложение запускается...");
+                LOGGER.info("Application starting...");
 
-                // ЗАПУСК НАСТОЯЩЕГО ОКНА
+                // LAUNCH ACTUAL WINDOW
                 MainFrame mainFrame = new MainFrame();
                 mainFrame.setVisible(true);
 
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Ошибка при запуске GUI", e);
+                LOGGER.log(Level.SEVERE, "Error launching GUI", e);
                 System.exit(1);
             }
         });

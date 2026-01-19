@@ -1,26 +1,30 @@
 package org.example;
 
 import java.util.List;
+import java.util.Map;
 
 /**
- * Интерфейс управления студентами.
- * Определяет основные операции CRUD, поиск и аналитику.
+ * Student Management Interface.
+ * Defines main CRUD operations, search, and analytics.
  */
 public interface StudentManager {
-    
-    // Операции с БД
+
+    // Database Operations
     void addStudent(Student student);
     void removeStudent(String studentID);
     void updateStudent(String studentID, Student updatedStudent);
-    
-    // Поиск и отображение
+
+    // Search and Display
     List<Student> displayAllStudents();
     List<Student> searchStudents(String query);
-    
-    // Аналитика
+
+    // Analytics
     double calculateAverageGrade();
-    
-    // Импорт / Экспорт
+
+    // Import / Export
     void exportStudentsToCSV(String filePath);
     void importStudentsFromCSV(String filePath);
+
+    // Course Management
+    Map<String, String> getAllCourses();
 }
