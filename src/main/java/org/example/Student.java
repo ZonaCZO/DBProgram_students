@@ -8,9 +8,9 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Class representing a student.
- */
+
+ // Class representing a student.
+
 public class Student implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -24,9 +24,9 @@ public class Student implements Serializable {
 
     // --- Constructors ---
 
-    /**
-     * Basic initialization. ID is generated automatically.
-     */
+
+     // Basic initialization. ID is generated automatically.
+
     public Student(String name, int age, double grade) {
         this.studentID = UUID.randomUUID().toString(); // Generate UUID
         this.enrollmentDate = LocalDate.now(); // Current date
@@ -36,9 +36,9 @@ public class Student implements Serializable {
         setGrade(grade);
     }
 
-    /**
-     * Full initialization (e.g., when loading from DB).
-     */
+
+    //Full initialization (e.g., when loading from DB).
+
     public Student(String studentID, String name, int age, double grade, LocalDate enrollmentDate, ArrayList<String> courses) {
         this.studentID = studentID;
         this.enrollmentDate = enrollmentDate;
@@ -145,19 +145,18 @@ public class Student implements Serializable {
         return sb.toString();
     }
 
-    /**
-     * Calculates weighted GPA.
-     * @param courseCredits map where key is course code, value is credits (weight).
-     */
+     //Calculates weighted GPA.
+
     public double calculateGPA(Map<String, Integer> courseCredits) {
         if (courses.isEmpty() || courseCredits == null) {
             return 0.0;
         }
-        // Logic can be extended. Simplified example:
-        // Assume 'grade' is overall grade, but if we wanted to calculate based on
-        // individual courses, we would need a grades table per course.
-        // Current structure has only overall 'grade'.
-        // This method returns grade converted to 4.0 scale (example logic).
+        /* Logic can be extended. Simplified example:
+        Assume 'grade' is overall grade, but if we wanted to calculate based on
+        individual courses, we would need a grades table per course.
+        Current structure has only overall 'grade'.
+        This method returns grade converted to 4.0 scale (example logic).
+        */
         return (grade / 20.0) - 1.0; // Approximate conversion of 100-point scale to GPA 4.0
     }
 

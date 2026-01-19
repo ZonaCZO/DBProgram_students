@@ -13,9 +13,9 @@ public class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
-        // 1. Global exception handler setup
-        // Ensures any unhandled exception (e.g., RuntimeException)
-        // is logged, and the user sees a clear message.
+        /* 1. Global exception handler setup
+         Ensures any unhandled exception (e.g., RuntimeException)
+         is logged, and the user sees a clear message.*/
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
             LOGGER.log(Level.SEVERE, "Unexpected error in thread " + thread.getName(), throwable);
             JOptionPane.showMessageDialog(null,
@@ -36,7 +36,6 @@ public class Main {
 
                 LOGGER.info("Application starting...");
 
-                // LAUNCH ACTUAL WINDOW
                 MainFrame mainFrame = new MainFrame();
                 mainFrame.setVisible(true);
 
