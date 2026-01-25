@@ -8,9 +8,9 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-
- // Class representing a student.
-
+/**
+ * Class representing a student.
+ */
 public class Student implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -24,20 +24,14 @@ public class Student implements Serializable {
 
     // --- Constructors ---
 
-
-     // Basic initialization. ID is generated automatically.
-
     public Student(String name, int age, double grade) {
-        this.studentID = UUID.randomUUID().toString(); // Generate UUID
-        this.enrollmentDate = LocalDate.now(); // Current date
+        this.studentID = UUID.randomUUID().toString();
+        this.enrollmentDate = LocalDate.now();
         this.courses = new ArrayList<>();
         setName(name);
         setAge(age);
         setGrade(grade);
     }
-
-
-    //Full initialization (e.g., when loading from DB).
 
     public Student(String studentID, String name, int age, double grade, LocalDate enrollmentDate, ArrayList<String> courses) {
         this.studentID = studentID;
@@ -48,84 +42,41 @@ public class Student implements Serializable {
         setGrade(grade);
     }
 
-    // --- Getters and Setters with Validation ---
+    // --- Getters and Setters ---
 
-    public String getStudentID() {
-        return studentID;
-    }
+    public String getStudentID() { return studentID; }
 
-    public String getName() {
-        return name;
-    }
-
+    public String getName() { return name; }
     public void setName(String name) {
-        // Validation: only letters, spaces, and hyphens
         if (name == null || !name.matches("^[\\p{L} .-]+$")) {
-            throw new StudentValidationException("Name contains invalid characters. Only letters, spaces, and hyphens are allowed.");
+            throw new StudentValidationException("Name contains invalid characters.");
         }
         this.name = name;
     }
 
-    public int getAge() {
-        return age;
-    }
-
+    public int getAge() { return age; }
     public void setAge(int age) {
-        // Validation: 18 - 100
-        if (age < 18 || age > 100) {
-            throw new StudentValidationException("Student age must be between 18 and 100.");
-        }
+        if (age < 18 || age > 100) throw new StudentValidationException("Age must be between 18 and 100.");
         this.age = age;
     }
 
-    public double getGrade() {
-        return grade;
-    }
-
+    public double getGrade() { return grade; }
     public void setGrade(double grade) {
-        // Range validation 0.0 - 100.0
-        if (grade < 0.0 || grade > 100.0) {
-            throw new StudentValidationException("Grade must be between 0.0 and 100.0.");
-        }
-        // Precision validation (up to two decimal places)
-        // Check if there is significant decimal part beyond 2 digits
-        double scaleCheck = grade * 100;
-        if (Math.abs(scaleCheck - Math.round(scaleCheck)) > 0.0001) {
-            throw new StudentValidationException("Grade must have no more than two decimal places.");
-        }
+        if (grade < 0.0 || grade > 100.0) throw new StudentValidationException("Grade must be 0-100.");
         this.grade = grade;
     }
 
-    public LocalDate getEnrollmentDate() {
-        return enrollmentDate;
-    }
+    public LocalDate getEnrollmentDate() { return enrollmentDate; }
+    public void setEnrollmentDate(LocalDate enrollmentDate) { this.enrollmentDate = enrollmentDate; }
 
-    public void setEnrollmentDate(LocalDate enrollmentDate) {
-        this.enrollmentDate = enrollmentDate;
-    }
-
-    // --- Course Management ---
-
-    public ArrayList<String> getCourses() {
-        return courses;
-    }
-
+    public ArrayList<String> getCourses() { return courses; }
     public void addCourse(String courseCode) {
-        if (!courses.contains(courseCode)) {
-            courses.add(courseCode);
-        }
+        if (!courses.contains(courseCode)) courses.add(courseCode);
     }
+    public void removeCourse(String courseCode) { courses.remove(courseCode); }
 
-    public void removeCourse(String courseCode) {
-        courses.remove(courseCode);
-    }
+    // --- Business Logic (Updated from your snippet) ---
 
-    // --- Business Logic Methods ---
-
-    /**
-     * Formats student details into a string.
-     * Uses StringBuilder and Streams.
-     */
     public String displayInfo() {
         StringBuilder sb = new StringBuilder();
         sb.append("Student Details:\n");
@@ -138,26 +89,34 @@ public class Student implements Serializable {
 
         // Use Stream API to process course list
         String coursesStr = courses.stream()
-                .map(String::toUpperCase) // Example processing
+                .map(String::toUpperCase)
                 .collect(Collectors.joining(", "));
 
         sb.append("Courses: [").append(coursesStr).append("]");
         return sb.toString();
     }
 
-     //Calculates weighted GPA.
-
+    // Calculates weighted GPA.
     public double calculateGPA(Map<String, Integer> courseCredits) {
-        if (courses.isEmpty() || courseCredits == null) {
-            return 0.0;
+        // Safety check for empty data
+        if (courses.isEmpty() || courseCredits == null) return 0.0;
+
+        double totalWeightedPoints = 0;
+        int totalCredits = 0;
+
+        // Simple conversion from 100-point scale to 4.0 GPA scale base
+        double gpaPoints = (grade / 20.0) - 1.0;
+        if (gpaPoints < 0) gpaPoints = 0;
+
+        for (String course : courses) {
+            // Retrieve course credit (weight) from the map or default to 1
+            Integer credit = courseCredits.getOrDefault(course, 1);
+            totalWeightedPoints += gpaPoints * credit;
+            totalCredits += credit;
         }
-        /* Logic can be extended. Simplified example:
-        Assume 'grade' is overall grade, but if we wanted to calculate based on
-        individual courses, we would need a grades table per course.
-        Current structure has only overall 'grade'.
-        This method returns grade converted to 4.0 scale (example logic).
-        */
-        return (grade / 20.0) - 1.0; // Approximate conversion of 100-point scale to GPA 4.0
+
+        // Return weighted average
+        return totalCredits == 0 ? 0.0 : totalWeightedPoints / totalCredits;
     }
 
     // --- Equals and HashCode ---
@@ -171,7 +130,5 @@ public class Student implements Serializable {
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(studentID);
-    }
+    public int hashCode() { return Objects.hash(studentID); }
 }

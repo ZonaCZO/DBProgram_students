@@ -221,7 +221,7 @@ public class StudentManagerImpl implements StudentManager {
     /**
      * Exports student data to a CSV file.
      * Format: ID,Name,Age,Grade,Date,Courses(semicolon separated)
-     * FIX: Uses Locale.US to ensure dot is used as decimal separator, preventing CSV corruption.
+     * FIX: Uses Locale.US to ensure dot is used as decimal separator.
      * @param filePath The destination file path.
      */
     @Override
@@ -230,7 +230,6 @@ public class StudentManagerImpl implements StudentManager {
             writer.write("ID,Name,Age,Grade,Date,Courses\n");
             for (Student s : displayAllStudents()) {
                 String coursesStr = String.join(";", s.getCourses());
-                // Force US locale to ensure dot (.) is used for decimals instead of comma (,)
                 writer.write(String.format(java.util.Locale.US, "%s,%s,%d,%.2f,%s,%s\n",
                         s.getStudentID(), s.getName(), s.getAge(), s.getGrade(), s.getEnrollmentDate(), coursesStr));
             }
@@ -239,15 +238,38 @@ public class StudentManagerImpl implements StudentManager {
 
     /**
      * Imports student data from a CSV file.
-     * Handles parsing of course lists and skips invalid lines or duplicates.
+     * Includes BOM handling for Excel files and header validation.
      * @param filePath The source file path.
+     * @throws StudentImportException if the file format is invalid.
      */
     @Override
     public void importStudentsFromCSV(String filePath) {
+        List<String> errors = new ArrayList<>();
+        int lineNum = 0;
+        int successCount = 0;
+
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line = reader.readLine(); // Skip header
+            String line = reader.readLine(); // Read Header
+
+            // --- FIX: Handle Byte Order Mark (BOM) from Excel ---
+            if (line != null && line.startsWith("\uFEFF")) {
+                line = line.substring(1);
+            }
+
+            lineNum++;
+
+            // 1. Validate Header
+            if (line == null || !line.trim().toLowerCase().startsWith("id,name,age")) {
+                // Use our new custom exception!
+                throw new StudentImportException("Invalid CSV header. Expected 'ID,Name,Age...'. Found: " + line);
+            }
+
             while ((line = reader.readLine()) != null) {
+                lineNum++;
                 String[] p = line.split(",", -1);
+
+                if (line.trim().isEmpty()) continue;
+
                 if (p.length >= 6) {
                     try {
                         String id = p[0];
@@ -262,14 +284,37 @@ public class StudentManagerImpl implements StudentManager {
                                 if (!c.trim().isEmpty()) courses.add(c.trim());
                             }
                         }
-                        // Add student with specific ID from CSV
+
                         addStudent(new Student(id, name, age, grade, date, courses));
+                        successCount++;
+
+                    } catch (NumberFormatException e) {
+                        errors.add("Line " + lineNum + ": Invalid number format (Age or Grade).");
                     } catch (Exception ex) {
-                        LOGGER.warning("Skipping invalid line or duplicate ID during import: " + line);
+                        errors.add("Line " + lineNum + ": " + ex.getMessage());
                     }
+                } else {
+                    errors.add("Line " + lineNum + ": Insufficient columns.");
                 }
             }
-        } catch (Exception e) { LOGGER.log(Level.SEVERE, "Import error", e); }
+
+            // 2. Report Errors
+            if (!errors.isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("Import finished. Success: ").append(successCount).append(", Failed: ").append(errors.size()).append("\nErrors:\n");
+                for (int i = 0; i < Math.min(errors.size(), 5); i++) {
+                    sb.append("- ").append(errors.get(i)).append("\n");
+                }
+                if (errors.size() > 5) sb.append("...and ").append(errors.size() - 5).append(" more.");
+
+                // Throw the custom exception
+                throw new StudentImportException(sb.toString());
+            }
+
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "File read error", e);
+            throw new StudentImportException("File error: " + e.getMessage());
+        }
     }
 
     /**

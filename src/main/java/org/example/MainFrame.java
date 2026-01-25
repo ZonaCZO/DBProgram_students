@@ -341,11 +341,15 @@ public class MainFrame extends JFrame {
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
                 manager.importStudentsFromCSV(fileChooser.getSelectedFile().getAbsolutePath());
-                refreshData();
+                // Success message only if no exception was thrown
                 log("Imported from: " + fileChooser.getSelectedFile().getName());
-                JOptionPane.showMessageDialog(this, "Import Successful!");
+                JOptionPane.showMessageDialog(this, "Import Successful! All records loaded.");
             } catch (Exception e) {
+                // If exception contains "Import finished", it means partial success
                 handleException(e);
+            } finally {
+                // Always refresh data to show whatever was successfully added
+                refreshData();
             }
         }
     }
