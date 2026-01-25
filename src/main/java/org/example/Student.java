@@ -30,7 +30,7 @@ public class Student implements Serializable {
         this.courses = new ArrayList<>();
         setName(name);
         setAge(age);
-        setGrade(grade);
+        setGrade(grade); // This will now trigger the validation check
     }
 
     public Student(String studentID, String name, int age, double grade, LocalDate enrollmentDate, ArrayList<String> courses) {
@@ -61,8 +61,20 @@ public class Student implements Serializable {
     }
 
     public double getGrade() { return grade; }
+
     public void setGrade(double grade) {
-        if (grade < 0.0 || grade > 100.0) throw new StudentValidationException("Grade must be 0-100.");
+        // 1. Range validation
+        if (grade < 0.0 || grade > 100.0) {
+            throw new StudentValidationException("Grade must be 0-100.");
+        }
+
+        // 2. Precision validation (Restored logic)
+        // Checks if there are more than 2 decimal places
+        double scaleCheck = grade * 100;
+        if (Math.abs(scaleCheck - Math.round(scaleCheck)) > 0.0001) {
+            throw new StudentValidationException("Grade must have no more than two decimal places.");
+        }
+
         this.grade = grade;
     }
 
@@ -75,7 +87,7 @@ public class Student implements Serializable {
     }
     public void removeCourse(String courseCode) { courses.remove(courseCode); }
 
-    // --- Business Logic (Updated from your snippet) ---
+    // --- Business Logic ---
 
     public String displayInfo() {
         StringBuilder sb = new StringBuilder();
@@ -96,26 +108,20 @@ public class Student implements Serializable {
         return sb.toString();
     }
 
-    // Calculates weighted GPA.
     public double calculateGPA(Map<String, Integer> courseCredits) {
-        // Safety check for empty data
         if (courses.isEmpty() || courseCredits == null) return 0.0;
 
         double totalWeightedPoints = 0;
         int totalCredits = 0;
-
-        // Simple conversion from 100-point scale to 4.0 GPA scale base
         double gpaPoints = (grade / 20.0) - 1.0;
         if (gpaPoints < 0) gpaPoints = 0;
 
         for (String course : courses) {
-            // Retrieve course credit (weight) from the map or default to 1
             Integer credit = courseCredits.getOrDefault(course, 1);
             totalWeightedPoints += gpaPoints * credit;
             totalCredits += credit;
         }
 
-        // Return weighted average
         return totalCredits == 0 ? 0.0 : totalWeightedPoints / totalCredits;
     }
 
