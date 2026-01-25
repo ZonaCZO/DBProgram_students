@@ -47,7 +47,7 @@ The system follows a modular architecture:
   * `StudentValidationException.java`: Custom exception for handling invalid user input.  
 * **Quality Assurance:**  
   * `StudentTest.java`: JUnit 5 test class covering \>80% of business logic, including validation boundaries and edge cases.  
-    *![][image1]*
+    <img width="443" height="535" alt="image" src="https://github.com/user-attachments/assets/0c708789-8db2-4173-a253-d470a5db8318" />
 
 ---
 
@@ -81,25 +81,25 @@ The system follows a modular architecture:
 
 The main tab displays the list of students with color-coded grades (Green for A, Red for F). Users can search, sort, and manage records.
 
-**![][image2]**
+<img width="1086" height="741" alt="image" src="https://github.com/user-attachments/assets/ffe381df-7a16-4102-a263-a55a2bb83196" />
 
 ### **Adding a Student**
 
 The input panel allows adding a new student. It validates input types and allows selecting multiple courses via checkboxes.
 
-**![][image3]**
+<img width="1083" height="120" alt="image" src="https://github.com/user-attachments/assets/d5827ab2-36c1-42f9-a6f5-72d5007939af" />
 
 ### **Editing a Student**
 
 Double-clicking or selecting "Edit" opens a modal dialog to modify details and update course enrollments.
 
-**![][image4]**
+<img width="262" height="280" alt="image" src="https://github.com/user-attachments/assets/bab22403-4ca0-493f-aab6-228f73adc886" />
 
 ### **Analytics (Grades Distribution)**
 
 The Analytics tab provides a graphical view of student performance distribution.
 
-**![][image5]**
+<img width="1091" height="598" alt="image" src="https://github.com/user-attachments/assets/54bbc9ab-c027-493e-a662-7af3938ac403" />
 
 ---
 
