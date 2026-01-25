@@ -10,8 +10,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Implementation of Student Manager.
- * Uses Singleton, JDBC, and transactions.
+ * Implementation of the StudentManager interface.
+ * Handles database interactions using JDBC, transactions, and the Singleton pattern.
  */
 public class StudentManagerImpl implements StudentManager {
 
@@ -19,15 +19,28 @@ public class StudentManagerImpl implements StudentManager {
     private static StudentManagerImpl instance;
     private static final String DB_URL = "jdbc:sqlite:student_management.db";
 
+    /**
+     * Private constructor to enforce Singleton pattern.
+     * Initializes the database connection and schema.
+     */
     private StudentManagerImpl() {
         initializeDatabase();
     }
 
+    /**
+     * Returns the singleton instance of the StudentManager.
+     * @return The singleton instance.
+     */
     public static synchronized StudentManagerImpl getInstance() {
         if (instance == null) instance = new StudentManagerImpl();
         return instance;
     }
 
+    /**
+     * Initializes the database schema.
+     * Creates tables for students, courses, and enrollments if they do not exist.
+     * Populates default courses if the course table is empty.
+     */
     private void initializeDatabase() {
         String createStudents = "CREATE TABLE IF NOT EXISTS students (studentID TEXT PRIMARY KEY, name TEXT NOT NULL, age INTEGER, grade REAL, enrollmentDate TEXT);";
         String createCourses = "CREATE TABLE IF NOT EXISTS courses (courseCode TEXT PRIMARY KEY, courseName TEXT, credits INTEGER);";
@@ -40,17 +53,24 @@ public class StudentManagerImpl implements StudentManager {
             stmt.execute(createEnrollments);
             stmt.execute("PRAGMA foreign_keys = ON;");
 
-            // Populate courses if empty
+            // Populate default courses if table is empty
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM courses");
             if (rs.next() && rs.getInt(1) == 0) {
-                stmt.execute("INSERT INTO courses (courseCode, courseName, credits) VALUES ('CS101', 'Intro to Java', 5), ('MATH101', 'Calculus I', 4), ('HIST101', 'World History', 3), ('PHYS101', 'Physics', 4);");
-                LOGGER.info("Database populated with initial courses.");
+                stmt.execute("INSERT INTO courses (courseCode, courseName, credits) VALUES " +
+                        "('CS101', 'Intro to Java', 5), " +
+                        "('MATH101', 'Calculus I', 4), " +
+                        "('HIST101', 'World History', 3), " +
+                        "('PHYS101', 'Physics', 4);");
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Database initialization error", e);
         }
     }
 
+    /**
+     * Retrieves all available courses from the database.
+     * @return A map where Key is CourseCode and Value is CourseName.
+     */
     @Override
     public Map<String, String> getAllCourses() {
         Map<String, String> courses = new java.util.HashMap<>();
@@ -62,6 +82,11 @@ public class StudentManagerImpl implements StudentManager {
         return courses;
     }
 
+    /**
+     * Adds a new student and their course enrollments to the database.
+     * Uses transactions to ensure data integrity.
+     * @param student The student object to add.
+     */
     @Override
     public void addStudent(Student student) {
         String sqlStudent = "INSERT INTO students(studentID, name, age, grade, enrollmentDate) VALUES(?,?,?,?,?)";
@@ -70,7 +95,7 @@ public class StudentManagerImpl implements StudentManager {
         Connection conn = null;
         try {
             conn = DriverManager.getConnection(DB_URL);
-            conn.setAutoCommit(false);
+            conn.setAutoCommit(false); // Start transaction
 
             try (PreparedStatement pstmt = conn.prepareStatement(sqlStudent)) {
                 pstmt.setString(1, student.getStudentID());
@@ -91,7 +116,7 @@ public class StudentManagerImpl implements StudentManager {
                     pstmtEnroll.executeBatch();
                 }
             }
-            conn.commit();
+            conn.commit(); // Commit transaction
             LOGGER.info("Student added: " + student.getName());
         } catch (SQLException e) {
             rollbackQuietly(conn);
@@ -99,19 +124,23 @@ public class StudentManagerImpl implements StudentManager {
         } finally { closeQuietly(conn); }
     }
 
+    /**
+     * Updates an existing student's personal info and course enrollments.
+     * Old enrollments are removed and replaced with the new list.
+     * @param studentID The ID of the student to update.
+     * @param updatedStudent The object containing updated data.
+     */
     @Override
     public void updateStudent(String studentID, Student updatedStudent) {
-        // SQL queries
         String sqlUpdateInfo = "UPDATE students SET name = ?, age = ?, grade = ? WHERE studentID = ?";
-        String sqlDeleteEnroll = "DELETE FROM enrollments WHERE studentID = ?"; // Delete old courses
-        String sqlInsertEnroll = "INSERT INTO enrollments(studentID, courseCode) VALUES(?,?)"; // Add new ones
+        String sqlDeleteEnroll = "DELETE FROM enrollments WHERE studentID = ?";
+        String sqlInsertEnroll = "INSERT INTO enrollments(studentID, courseCode) VALUES(?,?)";
 
         Connection conn = null;
         try {
             conn = DriverManager.getConnection(DB_URL);
-            conn.setAutoCommit(false); // Start transaction
+            conn.setAutoCommit(false);
 
-            // 1. Update personal info
             try (PreparedStatement pstmt = conn.prepareStatement(sqlUpdateInfo)) {
                 pstmt.setString(1, updatedStudent.getName());
                 pstmt.setInt(2, updatedStudent.getAge());
@@ -120,12 +149,13 @@ public class StudentManagerImpl implements StudentManager {
                 pstmt.executeUpdate();
             }
 
-            // 2. Update courses (Full overwrite for simplicity)
+            // Remove old courses
             try (PreparedStatement pstmtDel = conn.prepareStatement(sqlDeleteEnroll)) {
                 pstmtDel.setString(1, studentID);
                 pstmtDel.executeUpdate();
             }
 
+            // Add new courses
             if (!updatedStudent.getCourses().isEmpty()) {
                 try (PreparedStatement pstmtIns = conn.prepareStatement(sqlInsertEnroll)) {
                     for (String courseCode : updatedStudent.getCourses()) {
@@ -137,18 +167,20 @@ public class StudentManagerImpl implements StudentManager {
                 }
             }
 
-            conn.commit(); // Commit
+            conn.commit();
             LOGGER.info("Student updated: " + studentID);
-
         } catch (SQLException e) {
             rollbackQuietly(conn);
             LOGGER.log(Level.SEVERE, "Update error", e);
             throw new RuntimeException("Database error during update.");
-        } finally {
-            closeQuietly(conn);
-        }
+        } finally { closeQuietly(conn); }
     }
 
+    /**
+     * Removes a student from the database.
+     * Related enrollments are automatically deleted via CASCADE.
+     * @param studentID The ID of the student to remove.
+     */
     @Override
     public void removeStudent(String studentID) {
         try (Connection conn = DriverManager.getConnection(DB_URL);
@@ -186,31 +218,67 @@ public class StudentManagerImpl implements StudentManager {
         return displayAllStudents().stream().mapToDouble(Student::getGrade).filter(g -> g > 0).average().orElse(0.0);
     }
 
+    /**
+     * Exports student data to a CSV file.
+     * Format: ID,Name,Age,Grade,Date,Courses(semicolon separated)
+     * FIX: Uses Locale.US to ensure dot is used as decimal separator, preventing CSV corruption.
+     * @param filePath The destination file path.
+     */
     @Override
     public void exportStudentsToCSV(String filePath) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-            writer.write("ID,Name,Age,Grade,Date\n");
+            writer.write("ID,Name,Age,Grade,Date,Courses\n");
             for (Student s : displayAllStudents()) {
-                writer.write(String.format("%s,%s,%d,%.2f,%s\n", s.getStudentID(), s.getName(), s.getAge(), s.getGrade(), s.getEnrollmentDate()));
+                String coursesStr = String.join(";", s.getCourses());
+                // Force US locale to ensure dot (.) is used for decimals instead of comma (,)
+                writer.write(String.format(java.util.Locale.US, "%s,%s,%d,%.2f,%s,%s\n",
+                        s.getStudentID(), s.getName(), s.getAge(), s.getGrade(), s.getEnrollmentDate(), coursesStr));
             }
-        } catch (IOException e) { throw new RuntimeException("Export error"); }
+        } catch (IOException e) { throw new RuntimeException("Export error: " + e.getMessage()); }
     }
 
+    /**
+     * Imports student data from a CSV file.
+     * Handles parsing of course lists and skips invalid lines or duplicates.
+     * @param filePath The source file path.
+     */
     @Override
     public void importStudentsFromCSV(String filePath) {
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line = reader.readLine();
+            String line = reader.readLine(); // Skip header
             while ((line = reader.readLine()) != null) {
-                String[] p = line.split(",");
-                if (p.length >= 4) addStudent(new Student(p[1], Integer.parseInt(p[2]), Double.parseDouble(p[3])));
+                String[] p = line.split(",", -1);
+                if (p.length >= 6) {
+                    try {
+                        String id = p[0];
+                        String name = p[1];
+                        int age = Integer.parseInt(p[2]);
+                        double grade = Double.parseDouble(p[3]);
+                        LocalDate date = LocalDate.parse(p[4]);
+
+                        ArrayList<String> courses = new ArrayList<>();
+                        if (!p[5].isEmpty()) {
+                            for (String c : p[5].split(";")) {
+                                if (!c.trim().isEmpty()) courses.add(c.trim());
+                            }
+                        }
+                        // Add student with specific ID from CSV
+                        addStudent(new Student(id, name, age, grade, date, courses));
+                    } catch (Exception ex) {
+                        LOGGER.warning("Skipping invalid line or duplicate ID during import: " + line);
+                    }
+                }
             }
         } catch (Exception e) { LOGGER.log(Level.SEVERE, "Import error", e); }
     }
 
+    /**
+     * Helper method to map a ResultSet row to a Student object.
+     * Also fetches the list of enrolled courses.
+     */
     private Student mapRowToStudent(Connection conn, ResultSet rs) throws SQLException {
         String id = rs.getString("studentID");
         ArrayList<String> courses = new ArrayList<>();
-        // Load courses (separate query for simplicity)
         try (PreparedStatement pstmt = conn.prepareStatement("SELECT courseCode FROM enrollments WHERE studentID = ?")) {
             pstmt.setString(1, id);
             try (ResultSet rsC = pstmt.executeQuery()) {

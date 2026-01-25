@@ -19,6 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * The main application window (GUI).
+ * Acts as the View and partially the Controller in the MVC pattern.
+ */
 public class MainFrame extends JFrame {
 
     private final StudentManager manager;
@@ -30,14 +34,20 @@ public class MainFrame extends JFrame {
     private JSpinner ageSpinner;
     private JTextField gradeField;
     private JLabel statsLabel;
-    private Map<String, JCheckBox> courseCheckboxes; // For adding students
+    private Map<String, JCheckBox> courseCheckboxes;
 
+    /**
+     * Constructor initializes the UI and loads initial data.
+     */
     public MainFrame() {
         this.manager = StudentManagerImpl.getInstance();
         initUI();
         refreshData();
     }
 
+    /**
+     * Sets up the main window layout, tabs, and components.
+     */
     private void initUI() {
         setTitle("Student Management System");
         setSize(1100, 750);
@@ -45,8 +55,10 @@ public class MainFrame extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
+        // Top: Input Panel
         add(createInputPanel(), BorderLayout.NORTH);
 
+        // Center: Tabs
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.addTab("Student List", createListPanel());
 
@@ -59,6 +71,7 @@ public class MainFrame extends JFrame {
 
         add(tabbedPane, BorderLayout.CENTER);
 
+        // Bottom: Status Bar
         JPanel statusPanel = new JPanel(new BorderLayout());
         statsLabel = new JLabel(" Ready");
         statusPanel.setBorder(BorderFactory.createEtchedBorder());
@@ -66,6 +79,10 @@ public class MainFrame extends JFrame {
         add(statusPanel, BorderLayout.SOUTH);
     }
 
+    /**
+     * Creates the panel for adding new students.
+     * Includes fields for Name, Age, Grade, and Course selection checkboxes.
+     */
     private JPanel createInputPanel() {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createTitledBorder("Add New Student"));
@@ -83,6 +100,7 @@ public class MainFrame extends JFrame {
         dataPanel.add(new JLabel("Grade:"));
         dataPanel.add(gradeField);
 
+        // Course Selection
         JPanel coursesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         coursesPanel.setBorder(BorderFactory.createTitledBorder("Enroll in Courses:"));
         courseCheckboxes = new HashMap<>();
@@ -107,19 +125,25 @@ public class MainFrame extends JFrame {
         return mainPanel;
     }
 
+    /**
+     * Creates the panel containing the student table and control buttons.
+     */
     private JPanel createListPanel() {
         JPanel listPanel = new JPanel(new BorderLayout());
+
         String[] columns = {"ID", "Name", "Age", "Grade", "Enrollment Date", "Courses"};
+
         tableModel = new DefaultTableModel(columns, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
         studentTable = new JTable(tableModel);
 
+        // Custom renderer to color-code grades
         studentTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (column == 3) {
+                if (column == 3) { // Grade index
                     try {
                         double val = Double.parseDouble(value.toString().replace(",", "."));
                         if (val < 50) c.setForeground(Color.RED);
@@ -133,6 +157,7 @@ public class MainFrame extends JFrame {
 
         listPanel.add(new JScrollPane(studentTable), BorderLayout.CENTER);
 
+        // Control Buttons
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JTextField searchField = new JTextField(15);
         searchField.setBorder(BorderFactory.createTitledBorder("Search"));
@@ -153,6 +178,9 @@ public class MainFrame extends JFrame {
         delBtn.setBackground(new Color(255, 200, 200));
         delBtn.addActionListener(e -> deleteSelectedStudent());
 
+        JButton importBtn = new JButton("Import CSV");
+        importBtn.addActionListener(e -> importFromCSV());
+
         JButton exportBtn = new JButton("Export CSV");
         exportBtn.addActionListener(e -> exportToCSV());
 
@@ -160,12 +188,16 @@ public class MainFrame extends JFrame {
         controls.add(refreshBtn);
         controls.add(editBtn);
         controls.add(delBtn);
+        controls.add(importBtn);
         controls.add(exportBtn);
 
         listPanel.add(controls, BorderLayout.SOUTH);
         return listPanel;
     }
 
+    /**
+     * Handles adding a new student in a background thread.
+     */
     private void addStudentAction() {
         try {
             String name = nameField.getText();
@@ -190,6 +222,9 @@ public class MainFrame extends JFrame {
         } catch (Exception e) { handleException(e); }
     }
 
+    /**
+     * Opens a dialog to edit the selected student's details and courses.
+     */
     private void editSelectedStudent() {
         int row = studentTable.getSelectedRow();
         if (row == -1) { JOptionPane.showMessageDialog(this, "Select a student."); return; }
@@ -198,10 +233,10 @@ public class MainFrame extends JFrame {
         String name = (String) tableModel.getValueAt(row, 1);
         int age = (int) tableModel.getValueAt(row, 2);
         String grade = (String) tableModel.getValueAt(row, 3);
-        Object dateObj = tableModel.getValueAt(row, 4);
 
-        // Get current courses from table model
+        Object dateObj = tableModel.getValueAt(row, 4);
         Object coursesObj = tableModel.getValueAt(row, 5);
+
         List<?> currentCourses = (coursesObj instanceof List) ? (List<?>) coursesObj : new ArrayList<>();
 
         // Edit UI
@@ -209,7 +244,6 @@ public class MainFrame extends JFrame {
         JSpinner ageIn = new JSpinner(new SpinnerNumberModel(age, 18, 100, 1));
         JTextField gradeIn = new JTextField(grade.replace(",", "."));
 
-        // --- NEW PART: Course panel for editing ---
         JPanel coursesPanel = new JPanel(new GridLayout(0, 2));
         coursesPanel.setBorder(BorderFactory.createTitledBorder("Edit Courses"));
         Map<String, JCheckBox> editCheckboxes = new HashMap<>();
@@ -217,14 +251,12 @@ public class MainFrame extends JFrame {
 
         for (Map.Entry<String, String> entry : allCourses.entrySet()) {
             JCheckBox cb = new JCheckBox(entry.getValue());
-            // If student is already enrolled - check the box
             if (currentCourses.contains(entry.getKey())) {
                 cb.setSelected(true);
             }
             editCheckboxes.put(entry.getKey(), cb);
             coursesPanel.add(cb);
         }
-        // -----------------------------------------------------
 
         Object[] msg = {"Name:", nameIn, "Age:", ageIn, "Grade:", gradeIn, coursesPanel};
 
@@ -232,7 +264,6 @@ public class MainFrame extends JFrame {
             try {
                 double newGrade = Double.parseDouble(gradeIn.getText());
 
-                // Collect new selected courses
                 ArrayList<String> newCoursesList = new ArrayList<>();
                 for (Map.Entry<String, JCheckBox> entry : editCheckboxes.entrySet()) {
                     if (entry.getValue().isSelected()) newCoursesList.add(entry.getKey());
@@ -300,6 +331,25 @@ public class MainFrame extends JFrame {
     }
 
     private void searchStudents(String q) { updateTable(manager.searchStudents(q)); }
+
+    /**
+     * Opens a file chooser to import student data from a CSV file.
+     * Refreshes the table upon successful import.
+     */
+    private void importFromCSV() {
+        JFileChooser fileChooser = new JFileChooser();
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                manager.importStudentsFromCSV(fileChooser.getSelectedFile().getAbsolutePath());
+                refreshData();
+                log("Imported from: " + fileChooser.getSelectedFile().getName());
+                JOptionPane.showMessageDialog(this, "Import Successful!");
+            } catch (Exception e) {
+                handleException(e);
+            }
+        }
+    }
+
     private void exportToCSV() {
         JFileChooser fc = new JFileChooser();
         if (fc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
